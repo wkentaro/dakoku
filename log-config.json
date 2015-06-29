@@ -1,0 +1,11 @@
+{
+  "appenders": [
+    {
+      "type": "dateFile",
+      "category": "access",
+      "filename": "./log/access.log",
+      "pattern": "-yyyy-MM-dd"
+    }
+  ]
+}
+

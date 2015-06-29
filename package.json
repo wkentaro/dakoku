@@ -1,0 +1,23 @@
+{
+  "name": "dakoku",
+  "version": "0.0.0",
+  "private": true,
+  "engines": {
+    "node": "^0.12.2",
+    "npm": "^2.7.4"
+  },
+  "scripts": {
+    "start": "node app.js"
+  },
+  "dependencies": {
+    "async": "^1.2.1",
+    "later": "^1.1.6",
+    "lodash": "^3.9.3",
+    "log4js": "^0.6.26",
+    "moment": "^2.10.3",
+    "nightmare": "^1.8.2",
+    "node-schedule": "^0.2.9",
+    "phantomjs": "^1.9.17",
+    "request": "^2.58.0"
+  }
+}

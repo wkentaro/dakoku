@@ -1,0 +1,33 @@
+{
+  "valid": {
+    "start": "2015-06-01",
+    "end": "2015-12-31"
+  },
+  "working": [
+    {
+      "comment": "Monday",
+      "from": "10:00",
+      "till": "12:00"
+    },
+    {
+      "comment": "Tuesday",
+      "from": "10:00",
+      "till": "12:00"
+    },
+    {
+      "comment": "Wednesday",
+      "from": "10:00",
+      "till": "12:00"
+    },
+    {
+      "comment": "Thursday",
+      "from": "10:00",
+      "till": "12:00"
+    },
+    {
+      "comment": "Friday",
+      "from": "10:00",
+      "till": "12:00"
+    }
+  ]
+}
