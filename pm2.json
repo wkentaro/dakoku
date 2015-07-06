@@ -8,6 +8,5 @@
     "COMMON_VARIABLE": "true",
     "NODE_ENV": "production"
   },
-  "max_memory_restart": "20M",
   "autorestart": true
 }
