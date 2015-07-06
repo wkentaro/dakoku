@@ -66,20 +66,27 @@ var setSchedule = function(holidays){
   var jobs = [];
   for (var i = 0; i < schedule.working.length; i++){
     var worktime = schedule.working[i];
-    var fromtime = worktime.from.split(':');
-    var tilltime = worktime.till.split(':');
+    var fromtime = moment()
+      .day(i+1)
+      .hour(worktime.from.split(':')[0])
+      .minute(worktime.from.split(':')[1])
+      .add(-1 * config.human_mode, 'minutes');
+    var tilltime = moment()
+      .day(i+1)
+      .hour(worktime.till.split(':')[0])
+      .minute(worktime.till.split(':')[1]);
     console.log('register from: ' + worktime.from);
-    jobs.push(node_sched.scheduleJob({
-      hour: parseInt(fromtime[0]),
-      minute: parseInt(fromtime[1]),
-      dayOfWeek: i+1
-    }, shukkin));
-    console.log('register till: ' + tilltime);
-    jobs.push(node_sched.scheduleJob({
-      hour: parseInt(tilltime[0]),
-      minute: parseInt(tilltime[1]),
-      dayOfWeek: i+1
-    }, taikin));
+    var rule_from = new node_sched.RecurrenceRule();
+    rule_from.dayOfWeek = fromtime.day();
+    rule_from.hour = fromtime.hour();
+    rule_from.minute = fromtime.minute();
+    jobs.push(node_sched.scheduleJob(rule_from, function(){ shukkin(holidays); }));
+    console.log('register till: ' + worktime.till);
+    var rule_till = new node_sched.RecurrenceRule();
+    rule_till.dayOfWeek = tilltime.day();
+    rule_till.hour = tilltime.hour();
+    rule_till.minute = tilltime.minute();
+    jobs.push(node_sched.scheduleJob(rule_till, function(){ taikin(holidays); }));
   }
   return jobs;
 };
