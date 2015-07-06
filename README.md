@@ -8,8 +8,11 @@
 
 3. execute
 
+you may need `nvm` before.
+
 ```bash
 npm install -g pm2
+npm install
 pm2 start pm2.json # launch as daemon
 ```
 
