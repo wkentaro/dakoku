@@ -5,27 +5,27 @@
   },
   "working": [
     {
-      "comment": "Monday",
+      "dayOfWeek": "Mon",
       "from": "10:00",
       "till": "12:00"
     },
     {
-      "comment": "Tuesday",
+      "dayOfWeek": "Tue",
       "from": "10:00",
       "till": "12:00"
     },
     {
-      "comment": "Wednesday",
+      "dayOfWeek": "Wed",
       "from": "10:00",
       "till": "12:00"
     },
     {
-      "comment": "Thursday",
+      "dayOfWeek": "Thu",
       "from": "10:00",
       "till": "12:00"
     },
     {
-      "comment": "Friday",
+      "dayOfWeek": "Fri",
       "from": "10:00",
       "till": "12:00"
     }

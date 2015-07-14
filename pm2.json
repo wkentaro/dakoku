@@ -1,0 +1,10 @@
+{
+  "name": "dakoku",
+  "script": "./dakoku.py",
+  "instances": 1,
+  "exec_mode": "fork_mode",
+  "env": {
+    "COMMON_VARIABLE": "true",
+  },
+  "autorestart": true
+}

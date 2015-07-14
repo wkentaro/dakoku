@@ -15,10 +15,11 @@ except Exception as e:
     exit(1)
 import os
 import re
-from datetime import datetime
+import datetime as dt
 import json
 import urllib2
-from optparse import OptionParser
+from threading import Timer
+from random import random
 
 # logging
 import logging
@@ -29,6 +30,11 @@ handler.setLevel(LEVEL)
 log.setLevel(LEVEL)
 log.addHandler(handler)
 
+def dispatch_after(time, callback):
+    def func():
+        t = Timer(time, callback)
+        t.start()
+    return func
 
 class DakokuWorker(object):
     def __init__(self, host, user, password, holidays, capture_dir=None):
@@ -58,26 +64,26 @@ class DakokuWorker(object):
         log.info(res)
 
     def work_start(self):
-        if self._is_holiday(datetime.now().replace(tzinfo=pytz.timezone('Asia/Tokyo'))):
+        if self._is_holiday(dt.datetime.now().replace(tzinfo=pytz.timezone('Asia/Tokyo'))):
             log.info("Today is holiday! Skipping...")
             return
         self._login()
         self.g.click('input[name="syussya"]')
         self.g.wait_for_page_loaded()
         if self.capture_dir:
-            capture_path = os.path.join(self.capture_dir, datetime.now().strftime('syussya_%Y-%m-%d-%H:%M:%S.jpg'))
+            capture_path = os.path.join(self.capture_dir, dt.datetime.now().strftime('syussya_%Y-%m-%d-%H:%M:%S.jpg'))
             self.g.capture_to(capture_path)
             log.info("captured: %s", capture_path)
 
     def work_end(self):
-        if self._is_holiday(datetime.now().replace(tzinfo=pytz.timezone('Asia/Tokyo'))):
+        if self._is_holiday(dt.datetime.now().replace(tzinfo=pytz.timezone('Asia/Tokyo'))):
             log.info("Today is holiday! Skipping...")
             return
         self._login()
         self.g.click('input[name="taisya"]')
         self.g.wait_for_page_loaded()
         if self.capture_dir:
-            capture_path = os.path.join(self.capture_dir, datetime.now().strftime('taisya_%Y-%m-%d-%H:%M:%S.jpg'))
+            capture_path = os.path.join(self.capture_dir, dt.datetime.now().strftime('taisya_%Y-%m-%d-%H:%M:%S.jpg'))
             self.g.capture_to(capture_path)
             log.info("captured: %s", capture_path)
 
@@ -87,9 +93,9 @@ class DakokuManager(object):
         self.schedule_path = schedule_path
         cfg = self._load_config()
         try:
-            self.human_mode_min = cfg["human_mode"]
+            human_mode_min = cfg["human_mode"]
         except:
-            self.human_mode_min = 0
+            human_mode_min = 0
         try:
             self.log_dir = cfg["log_dir"]
             file_handler = logging.FileHandler(os.path.join(self.log_dir, "dakoku.log"), 'a+')
@@ -100,11 +106,11 @@ class DakokuManager(object):
             self.log_dir = None
 
         sched = self._load_schedule()
-        start_date = datetime.strptime(sched["valid"]["start"], '%Y-%m-%d').replace(tzinfo=pytz.timezone('Asia/Tokyo'))
-        end_date = datetime.strptime(sched["valid"]["end"], '%Y-%m-%d').replace(tzinfo=pytz.timezone('Asia/Tokyo'))
+        start_date = dt.datetime.strptime(sched["valid"]["start"], '%Y-%m-%d').replace(tzinfo=pytz.timezone('Asia/Tokyo'))
+        end_date = dt.datetime.strptime(sched["valid"]["end"], '%Y-%m-%d').replace(tzinfo=pytz.timezone('Asia/Tokyo'))
         holidays = self._get_holidays(start_date, end_date)
         self.worker = DakokuWorker(cfg["host"], cfg["user"], cfg["pass"], holidays, self.log_dir)
-        self.register(sched["working"], start_date, end_date, holidays)
+        self.register(sched["working"], start_date, end_date, holidays, human_mode_min)
 
     def _load_config(self):
         with open(self.config_path, 'r') as f:
@@ -131,25 +137,31 @@ class DakokuManager(object):
         holidays = []
         for d in res["feed"]["entry"]:
             d_str = pattern.findall(d["id"]["$t"])[0]
-            holidays.append(datetime.strptime(d_str, '%Y%m%d').replace(tzinfo=pytz.timezone("Asia/Tokyo")))
+            holidays.append(dt.datetime.strptime(d_str, '%Y%m%d').replace(tzinfo=pytz.timezone("Asia/Tokyo")))
         return holidays
 
-    def register(self, working, start_date, end_date, holidays):
+    def register(self, working, start_date, end_date, holidays, human_mode_min=0):
         self.scheduler = Scheduler(timezone=pytz.timezone('Asia/Tokyo'), logger=log)
+        today = dt.date.today()
         for w in working:
             # schedule shukkin
             h, m = map(int, w["from"].split(':'))
+            fromtime = dt.time(h,m,tzinfo=pytz.timezone('Asia/Tokyo'))
+            d = dt.datetime.combine(today, fromtime) - dt.timedelta(minutes=human_mode_min)
             self.scheduler.add_job(self.worker.work_start, 'cron',
                                    day_of_week=w["dayOfWeek"],
-                                   hour=h, minute=m,
+                                   hour=d.hour, minute=d.minute,
                                    start_date=start_date,
                                    end_date=end_date,
                                    timezone=pytz.timezone('Asia/Tokyo'))
             # schedule taikin
             h, m = map(int, w["till"].split(':'))
-            self.scheduler.add_job(self.worker.work_start, 'cron',
+            tilltime = dt.time(h,m,tzinfo=pytz.timezone('Asia/Tokyo'))
+            self.scheduler.add_job(dispatch_after(random() * human_mode_min,
+                                                  self.worker.work_start),
+                                   'cron',
                                    day_of_week=w["dayOfWeek"],
-                                   hour=h, minute=m,
+                                   hour=tilltime.hour, minute=tilltime.minute,
                                    start_date=start_date,
                                    end_date=end_date,
                                    timezone=pytz.timezone('Asia/Tokyo'))
