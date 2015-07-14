@@ -23,7 +23,7 @@ from random import random
 
 # logging
 import logging
-LEVEL = logging.WARN
+LEVEL = logging.INFO
 log = logging.getLogger(__name__)
 handler = logging.StreamHandler()
 handler.setLevel(LEVEL)
