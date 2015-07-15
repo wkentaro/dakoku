@@ -1,3 +1,0 @@
-Ghost.py
-pytz
-APScheduler
