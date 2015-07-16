@@ -25,9 +25,11 @@ from random import random
 import logging
 LEVEL = logging.INFO
 log = logging.getLogger(__name__)
+fmt = logging.Formatter('[%(asctime)s] %(levelname)s - %(message)s')
 handler = logging.StreamHandler()
 handler.setLevel(LEVEL)
-log.setLevel(LEVEL)
+handler.setFormatter(fmt)
+log.setLevel(logging.DEBUG)
 log.addHandler(handler)
 
 def dispatch_after(time, callback):
@@ -61,31 +63,41 @@ class DakokuWorker(object):
             "user_id": self.user,
             "password": self.password
         })
-        log.info(res)
+        log.info("logging in: %s", res)
 
     def work_start(self):
-        if self._is_holiday(dt.datetime.now().replace(tzinfo=pytz.timezone('Asia/Tokyo'))):
-            log.info("Today is holiday! Skipping...")
-            return
-        self._login()
-        self.g.click('input[name="syussya"]')
-        self.g.wait_for_page_loaded()
-        if self.capture_dir:
-            capture_path = os.path.join(self.capture_dir, dt.datetime.now().strftime('syussya_%Y-%m-%d-%H:%M:%S.jpg'))
-            self.g.capture_to(capture_path)
-            log.info("captured: %s", capture_path)
+        now_time = dt.datetime.now().replace(tzinfo=pytz.timezone('Asia/Tokyo'))
+        try:
+            if self._is_holiday(now_time):
+                log.info("Today is holiday! Skipping...")
+                return
+            self._login()
+            self.g.click('input[name="syussya"]')
+            self.g.wait_for_page_loaded()
+            log.info(now_time.strftime("work started at %Y-%m-%d %H:%M:%S"))
+            if self.capture_dir:
+                capture_path = os.path.join(self.capture_dir, now_time.strftime('syussya_%Y-%m-%d-%H:%M:%S.jpg'))
+                self.g.capture_to(capture_path)
+                log.info("captured: %s", capture_path)
+        except Exception as e:
+            log.error("failed to start work: %s", str(e))
 
     def work_end(self):
-        if self._is_holiday(dt.datetime.now().replace(tzinfo=pytz.timezone('Asia/Tokyo'))):
-            log.info("Today is holiday! Skipping...")
-            return
-        self._login()
-        self.g.click('input[name="taisya"]')
-        self.g.wait_for_page_loaded()
-        if self.capture_dir:
-            capture_path = os.path.join(self.capture_dir, dt.datetime.now().strftime('taisya_%Y-%m-%d-%H:%M:%S.jpg'))
-            self.g.capture_to(capture_path)
-            log.info("captured: %s", capture_path)
+        now_time = dt.datetime.now().replace(tzinfo=pytz.timezone('Asia/Tokyo'))
+        try:
+            if self._is_holiday(now_time):
+                log.info("Today is holiday! Skipping...")
+                return
+            self._login()
+            self.g.click('input[name="taisya"]')
+            self.g.wait_for_page_loaded()
+            log.info(now_time.strftime("work ended at %Y-%m-%d %H:%M:%S"))
+            if self.capture_dir:
+                capture_path = os.path.join(self.capture_dir, now_time.strftime('taisya_%Y-%m-%d-%H:%M:%S.jpg'))
+                self.g.capture_to(capture_path)
+                log.info("captured: %s", capture_path)
+        except Exception as e:
+            log.error('failed to end work: %s', str(e))
 
 class DakokuManager(object):
     def __init__(self, config_path, schedule_path):
@@ -108,16 +120,19 @@ class DakokuManager(object):
         sched = self._load_schedule()
         start_date = dt.datetime.strptime(sched["valid"]["start"], '%Y-%m-%d').replace(tzinfo=pytz.timezone('Asia/Tokyo'))
         end_date = dt.datetime.strptime(sched["valid"]["end"], '%Y-%m-%d').replace(tzinfo=pytz.timezone('Asia/Tokyo'))
+        log.info("dakoku is valid for %s - %s", start_date, end_date)
         holidays = self._get_holidays(start_date, end_date)
         self.worker = DakokuWorker(cfg["host"], cfg["user"], cfg["pass"], holidays, self.log_dir)
         self.register(sched["working"], start_date, end_date, holidays, human_mode_min)
 
     def _load_config(self):
+        log.debug("loading config from %s", self.config_path)
         with open(self.config_path, 'r') as f:
             cfg = json.load(f)
         return cfg
 
     def _load_schedule(self):
+        log.debug("loading schedule from %s", self.schedule_path)
         with open(self.schedule_path, 'r') as f:
             cfg = json.load(f)
         return cfg
@@ -130,7 +145,7 @@ class DakokuManager(object):
         calendar_end = '&start-max=' + end_date.strftime('%Y-%m-%d')
         calendar_suffix = '&max-results=30&alt=json'
         url = calendar_host + calendar_id + calendar_start + calendar_end + calendar_suffix
-        log.info("fetching holiday information from %s", url)
+        log.debug("fetching holiday information from %s", url)
         raw_res = urllib2.urlopen(url)
         res = json.loads(raw_res.read())
         log.info("imported %d %s", len(res["feed"]["entry"]), " holidays")
