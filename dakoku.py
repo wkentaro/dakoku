@@ -7,6 +7,7 @@ try:
     from ghost import Ghost
     import pytz
     from apscheduler.schedulers.blocking import BlockingScheduler as Scheduler
+    from apscheduler.triggers.cron import CronTrigger
 except Exception as e:
     print "Error:", e
     print "try:"
@@ -163,23 +164,23 @@ class DakokuManager(object):
             h, m = map(int, w["from"].split(':'))
             fromtime = dt.time(h,m,tzinfo=pytz.timezone('Asia/Tokyo'))
             d = dt.datetime.combine(today, fromtime) - dt.timedelta(minutes=human_mode_min)
-            self.scheduler.add_job(self.worker.work_start, 'cron',
-                                   day_of_week=w["dayOfWeek"],
-                                   hour=d.hour, minute=d.minute,
-                                   start_date=start_date,
-                                   end_date=end_date,
-                                   timezone=pytz.timezone('Asia/Tokyo'))
+            trigger = CronTrigger(day_of_week=w["dayOfWeek"],
+                                  hour=d.hour, minute=d.minute,
+                                  start_date=start_date,
+                                  end_date=end_date,
+                                  timezone=pytz.timezone('Asia/Tokyo'))
+            self.scheduler.add_job(self.worker.work_start,trigger)
             # schedule taikin
             h, m = map(int, w["till"].split(':'))
             tilltime = dt.time(h,m,tzinfo=pytz.timezone('Asia/Tokyo'))
+            trigger = CronTrigger(day_of_week=w["dayOfWeek"],
+                                  hour=tilltime.hour, minute=tilltime.minute,
+                                  start_date=start_date,
+                                  end_date=end_date,
+                                  timezone=pytz.timezone('Asia/Tokyo'))
             self.scheduler.add_job(dispatch_after(random() * human_mode_min,
                                                   self.worker.work_start),
-                                   'cron',
-                                   day_of_week=w["dayOfWeek"],
-                                   hour=tilltime.hour, minute=tilltime.minute,
-                                   start_date=start_date,
-                                   end_date=end_date,
-                                   timezone=pytz.timezone('Asia/Tokyo'))
+                                   trigger)
         self.scheduler.print_jobs()
 
     def start(self):
