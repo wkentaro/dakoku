@@ -4,7 +4,7 @@
 
 
 try:
-    from ghost import Ghost
+    from splinter import Browser
     import pytz
     from apscheduler.schedulers.blocking import BlockingScheduler as Scheduler
     from apscheduler.triggers.cron import CronTrigger
@@ -15,6 +15,7 @@ except Exception as e:
     print "\tsudo pip install -r pip.txt"
     exit(1)
 import os
+import shutil
 import re
 import datetime as dt
 import json
@@ -35,7 +36,7 @@ log.addHandler(handler)
 
 def dispatch_after(time, callback):
     def func():
-        t = Timer(time, callback)
+        t = Timer(random() * time, callback)
         t.start()
     return func
 
@@ -56,15 +57,15 @@ class DakokuWorker(object):
         return False
 
     def _login(self):
-        self.g = Ghost()
-        res, _ = self.g.open(self.host)
-        log.debug(res)
-        self.g.wait_for_page_loaded()
-        res, _ = self.g.fill("form", {
-            "user_id": self.user,
-            "password": self.password
-        })
-        log.info("logging in: %s", res)
+#        self.browser = Browser("phantomjs", user_agent="Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/44.0.2403.125 Safari/537.36")
+        self.browser = Browser("firefox")
+        self.browser.visit(self.host)
+        self.browser.fill('user_id', self.user)
+        self.browser.fill('password', self.password)
+        try:
+            log.info("logging in: %s", self.browser.title.decode('utf-8'))
+        except:
+            log.info("logging in: %s", self.browser.title)
 
     def work_start(self):
         now_time = dt.datetime.now().replace(tzinfo=pytz.timezone('Asia/Tokyo'))
@@ -73,15 +74,22 @@ class DakokuWorker(object):
                 log.info("Today is holiday! Skipping...")
                 return
             self._login()
-            self.g.click('input[name="syussya"]')
-            self.g.wait_for_page_loaded()
+            if self.browser.is_element_present_by_name("syussya", wait_time=5):
+                self.browser.find_by_name("syussya").click()
+            else:
+                log.error("failed to load web page")
+                return
             log.info(now_time.strftime("work started at %Y-%m-%d %H:%M:%S"))
             if self.capture_dir:
                 capture_path = os.path.join(self.capture_dir, now_time.strftime('syussya_%Y-%m-%d-%H:%M:%S.jpg'))
-                self.g.capture_to(capture_path)
-                log.info("captured: %s", capture_path)
+                tmppath = self.browser.screenshot(suffix="jpg")
+                log.info("captured: %s", tmppath)
+                shutil.copyfile(tmppath, capture_path)
+                log.info("copied to: %s", capture_path)
         except Exception as e:
             log.error("failed to start work: %s", str(e))
+        finally:
+            self.browser.quit()
 
     def work_end(self):
         now_time = dt.datetime.now().replace(tzinfo=pytz.timezone('Asia/Tokyo'))
@@ -90,15 +98,22 @@ class DakokuWorker(object):
                 log.info("Today is holiday! Skipping...")
                 return
             self._login()
-            self.g.click('input[name="taisya"]')
-            self.g.wait_for_page_loaded()
+            if self.browser.is_element_present_by_name("taisya", wait_time=5):
+                self.browser.find_by_name("taisya").click()
+            else:
+                log.error("failed to load web page")
+                return
             log.info(now_time.strftime("work ended at %Y-%m-%d %H:%M:%S"))
             if self.capture_dir:
                 capture_path = os.path.join(self.capture_dir, now_time.strftime('taisya_%Y-%m-%d-%H:%M:%S.jpg'))
-                self.g.capture_to(capture_path)
-                log.info("captured: %s", capture_path)
+                tmppath = self.browser.screenshot(suffix="jpg")
+                log.info("captured: %s", tmppath)
+                shutil.copyfile(tmppath, capture_path)
+                log.info("copied to: %s", capture_path)
         except Exception as e:
             log.error('failed to end work: %s', str(e))
+        finally:
+            self.browser.quit()
 
 class DakokuManager(object):
     def __init__(self, config_path, schedule_path):
@@ -178,8 +193,8 @@ class DakokuManager(object):
                                   start_date=start_date,
                                   end_date=end_date,
                                   timezone=pytz.timezone('Asia/Tokyo'))
-            self.scheduler.add_job(dispatch_after(random() * human_mode_min,
-                                                  self.worker.work_start),
+            self.scheduler.add_job(dispatch_after(human_mode_min,
+                                                  self.worker.work_end),
                                    trigger)
         self.scheduler.print_jobs()
 

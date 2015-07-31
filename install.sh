@@ -7,9 +7,9 @@ OS=`uname -s`
 echo "install requirements..."
 if [ $OS = "Linux" ]; then
     sudo apt-get update
-    sudo apt-get install curl python-pip python-pyside xvfb
+    sudo apt-get install curl python-pip xvfb
 elif [ $OS = "Darwin" ]; then
-    pip install pyside
+    brew install xvfb
 else
     echo "Only supports OSX/Ubuntu"
     exit 1
@@ -22,7 +22,7 @@ if [ $OS = "Linux" ]; then
 fi
 $PIP install -U pip
 $PIP install -U pytz APScheduler
-$PIP install -U Ghost.py --pre
+$PIP install -U splinter
 
 
 echo "setup nodejs..."
