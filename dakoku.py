@@ -47,6 +47,7 @@ class DakokuWorker(object):
         self.password = password
         self.holidays = holidays
         self.capture_dir = capture_dir
+        self.browser = None
 
     def _is_same_day(self, t1, t2):
         return t1.strftime('%Y%m%d') == t2.strftime('%Y%m%d')
