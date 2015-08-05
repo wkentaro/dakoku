@@ -1,8 +1,9 @@
 {
   "name": "dakoku",
-  "script": "xvfb-run python ./dakoku.py",
-  "instances": 1,
-  "exec_mode": "fork_mode",
+  "script": "launch.sh",
+  "exec_interpreter": "bash",
+  "exec_mode": "fork",
+  "instances": "1",
   "env": {
     "COMMON_VARIABLE": "true",
   },
