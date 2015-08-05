@@ -38,6 +38,7 @@ def dispatch_after(time, callback):
     def func():
         t = Timer(random() * time, callback)
         t.start()
+    func.__name__ = callback.__name__
     return func
 
 class DakokuWorker(object):
@@ -185,7 +186,9 @@ class DakokuManager(object):
                                   start_date=start_date,
                                   end_date=end_date,
                                   timezone=pytz.timezone('Asia/Tokyo'))
-            self.scheduler.add_job(self.worker.work_start,trigger)
+            self.scheduler.add_job(dispatch_after(human_mode_min,
+                                                  self.worker.work_start),
+                                   trigger)
             # schedule taikin
             h, m = map(int, w["till"].split(':'))
             tilltime = dt.time(h,m,tzinfo=pytz.timezone('Asia/Tokyo'))
