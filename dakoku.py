@@ -186,7 +186,7 @@ class DakokuManager(object):
                                   start_date=start_date,
                                   end_date=end_date,
                                   timezone=pytz.timezone('Asia/Tokyo'))
-            self.scheduler.add_job(dispatch_after(human_mode_min,
+            self.scheduler.add_job(dispatch_after(human_mode_min * 60,
                                                   self.worker.work_start),
                                    trigger)
             # schedule taikin
@@ -197,7 +197,7 @@ class DakokuManager(object):
                                   start_date=start_date,
                                   end_date=end_date,
                                   timezone=pytz.timezone('Asia/Tokyo'))
-            self.scheduler.add_job(dispatch_after(human_mode_min,
+            self.scheduler.add_job(dispatch_after(human_mode_min * 60,
                                                   self.worker.work_end),
                                    trigger)
         self.scheduler.print_jobs()
