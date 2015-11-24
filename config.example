@@ -3,5 +3,6 @@
   "user": "",
   "pass": "",
   "log_dir": "log",
-  "human_mode": 1
+  "api_key": "",
+  "human_mode": 15
 }

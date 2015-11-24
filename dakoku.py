@@ -8,11 +8,12 @@ try:
     import pytz
     from apscheduler.schedulers.blocking import BlockingScheduler as Scheduler
     from apscheduler.triggers.cron import CronTrigger
+    from apiclient.discovery import build as Google
 except Exception as e:
     print "Error:", e
     print "try:"
     print "\tsudo apt-get install python-pyside python-pip"
-    print "\tsudo pip install -r pip.txt"
+    print "\tsudo pip install -r requirements.txt"
     exit(1)
 import os
 import shutil
@@ -139,7 +140,15 @@ class DakokuManager(object):
         start_date = dt.datetime.strptime(sched["valid"]["start"], '%Y-%m-%d').replace(tzinfo=pytz.timezone('Asia/Tokyo'))
         end_date = dt.datetime.strptime(sched["valid"]["end"], '%Y-%m-%d').replace(tzinfo=pytz.timezone('Asia/Tokyo'))
         log.info("dakoku is valid for %s - %s", start_date, end_date)
-        holidays = self._get_holidays(start_date, end_date)
+        holidays = []
+        if "api_key" in cfg:
+            try:
+                holidays = self._get_holidays(cfg["api_key"], start_date, end_date)
+                log.info("holidays are skipped: %s", holidays)
+            except Exception as e:
+                log.error("failed to import holidays: %s", e)
+        else:
+            log.warn("No api_key specified. No holiday is registered!")
         self.worker = DakokuWorker(cfg["host"], cfg["user"], cfg["pass"], holidays, self.log_dir)
         self.register(sched["working"], start_date, end_date, holidays, human_mode_min)
 
@@ -154,24 +163,19 @@ class DakokuManager(object):
         with open(self.schedule_path, 'r') as f:
             cfg = json.load(f)
         return cfg
-        
-    def _get_holidays(self, start_date, end_date):
-        pattern = re.compile("^.*basic\/([0-9]*)_.*$")
-        calendar_id = 'japanese__ja@holiday.calendar.google.com'
-        calendar_host = 'https://www.google.com/calendar/feeds/'
-        calendar_start = '/public/basic?start-min=' + start_date.strftime('%Y-%m-%d')
-        calendar_end = '&start-max=' + end_date.strftime('%Y-%m-%d')
-        calendar_suffix = '&max-results=30&alt=json'
-        url = calendar_host + calendar_id + calendar_start + calendar_end + calendar_suffix
-        log.debug("fetching holiday information from %s", url)
-        raw_res = urllib2.urlopen(url)
-        res = json.loads(raw_res.read())
-        log.info("imported %d %s", len(res["feed"]["entry"]), " holidays")
-        holidays = []
-        for d in res["feed"]["entry"]:
-            d_str = pattern.findall(d["id"]["$t"])[0]
-            holidays.append(dt.datetime.strptime(d_str, '%Y%m%d').replace(tzinfo=pytz.timezone("Asia/Tokyo")))
-        return holidays
+
+    def _get_holidays(self, api_key, start_date, end_date):
+        srv = Google(serviceName='calendar',
+                     version='v3',
+                     developerKey=api_key)
+        calendar_id = 'outid3el0qkcrsuf89fltf7a4qbacgt9@import.calendar.google.com'
+        cal = srv.events().list(calendarId=calendar_id,
+                                maxResults=30,
+                                orderBy="startTime",
+                                singleEvents=True,
+                                timeMin=start_date.strftime('%Y-%m-%dT%H:%M:%SZ'),
+                                timeMax=end_date.strftime('%Y-%m-%dT%H:%M:%SZ')).execute()
+        return [dt.datetime.strptime(e["start"]["date"], '%Y-%m-%d').replace(tzinfo=pytz.timezone("Asia/Tokyo")) for e in cal["items"]]
 
     def register(self, working, start_date, end_date, holidays, human_mode_min=0):
         self.scheduler = Scheduler(timezone=pytz.timezone('Asia/Tokyo'), logger=log)

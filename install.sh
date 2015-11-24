@@ -21,9 +21,7 @@ if [ $OS = "Linux" ]; then
     PIP="sudo -H pip"
 fi
 $PIP install -U pip
-$PIP install -U pytz APScheduler
-$PIP install -U splinter
-
+$PIP install -r requirements.txt
 
 echo "setup nodejs..."
 if [ ! -e $HOME/.nvm ]; then
