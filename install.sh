@@ -23,6 +23,7 @@ fi
 $PIP install -U pip
 $PIP install -U pytz APScheduler
 $PIP install -U splinter
+$PIP install 'japanese-holiday==0.0.4'
 
 
 echo "setup nodejs..."

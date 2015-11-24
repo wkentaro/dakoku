@@ -8,6 +8,7 @@ try:
     import pytz
     from apscheduler.schedulers.blocking import BlockingScheduler as Scheduler
     from apscheduler.triggers.cron import CronTrigger
+    import japanese_holiday
 except Exception as e:
     print "Error:", e
     print "try:"
@@ -134,6 +135,7 @@ class DakokuManager(object):
             log.info("saving log to %s", self.log_dir)
         except:
             self.log_dir = None
+        self.api_key = cfg["api_key"]
 
         sched = self._load_schedule()
         start_date = dt.datetime.strptime(sched["valid"]["start"], '%Y-%m-%d').replace(tzinfo=pytz.timezone('Asia/Tokyo'))
@@ -156,22 +158,17 @@ class DakokuManager(object):
         return cfg
         
     def _get_holidays(self, start_date, end_date):
-        pattern = re.compile("^.*basic\/([0-9]*)_.*$")
-        calendar_id = 'japanese__ja@holiday.calendar.google.com'
-        calendar_host = 'https://www.google.com/calendar/feeds/'
-        calendar_start = '/public/basic?start-min=' + start_date.strftime('%Y-%m-%d')
-        calendar_end = '&start-max=' + end_date.strftime('%Y-%m-%d')
-        calendar_suffix = '&max-results=30&alt=json'
-        url = calendar_host + calendar_id + calendar_start + calendar_end + calendar_suffix
-        log.debug("fetching holiday information from %s", url)
-        raw_res = urllib2.urlopen(url)
-        res = json.loads(raw_res.read())
-        log.info("imported %d %s", len(res["feed"]["entry"]), " holidays")
-        holidays = []
-        for d in res["feed"]["entry"]:
-            d_str = pattern.findall(d["id"]["$t"])[0]
-            holidays.append(dt.datetime.strptime(d_str, '%Y%m%d').replace(tzinfo=pytz.timezone("Asia/Tokyo")))
-        return holidays
+        holidays = japanese_holiday.getholidays(
+            str(self.api_key),  # this function does not allow unicode
+            japanese_holiday.HOLIDAY_TYPE_OFFICIAL_JA,
+            start_date.strftime('%Y-%m-%d'),
+            end_date.strftime('%Y-%m-%d'),
+        )
+        ret = []
+        for hd in holidays:
+            date_str = hd['start']['date']
+            ret.append(dt.datetime.strptime(date_str, '%Y-%m-%d').replace(tzinfo=pytz.timezone('Asia/Tokyo')))
+        return ret
 
     def register(self, working, start_date, end_date, holidays, human_mode_min=0):
         self.scheduler = Scheduler(timezone=pytz.timezone('Asia/Tokyo'), logger=log)
