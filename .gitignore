@@ -1,6 +1,7 @@
 # dakoku specific files
 schedule.json
 config.json
+log/*
 
 ### https://raw.github.com/github/gitignore/13f15a38f3132ea780ca8c3d237a6c3405a6ca69/Global/Emacs.gitignore
 
